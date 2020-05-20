@@ -11,6 +11,12 @@ def render(win, environment, initial_state, px_scale):
     print(ship)
     ship_rend = graphics.Line(  graphics.Point(ship[0][0]*px_scale, ship[0][1]*px_scale), 
                                 graphics.Point(ship[1][0]*px_scale, ship[1][1]*px_scale)).draw(win)
+
+    message = graphics.Text(graphics.Point(win.getWidth()/2, 20), 'Click anywhere to quit.')
+    message.draw(win)
+    win.getMouse()
+    win.close()
+
     return ship_rend
 
 class Environment:
@@ -86,6 +92,12 @@ class Episode:
 
     def animate(self, delay):
         win = GraphWin("Tugboat episode", win_size[0], win_size[1], autoflush=False)
+
+        message = Text(Point(win.getWidth()/2, 20), 'Click anywhere to quit.')
+        message.draw(win)
+        win.getMouse()
+        win.close()
+
         ship_rend = render(win, self.environment, self.initial_state, self.px_scale)
         time.sleep(delay)
         for action in self.actions:
