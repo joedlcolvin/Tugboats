@@ -41,7 +41,7 @@ class State:
         return valid
 
     def _intersect(self, l1,l2):
-        return self._intersect_points([l1[0],l1[1]], [l2[0],l2[1]])
+        return self._intersect_points(l1[0],l1[1], l2[0],l2[1])
 
     def _ccw(self, A,B,C):
         return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
