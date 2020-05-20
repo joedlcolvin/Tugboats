@@ -70,4 +70,4 @@ def test_episode():
     states = [[10,10,i] for i in range(360)]
     px_scale = min(int(WIN_WIDTH/GRID_WIDTH), int(WIN_HEIGHT/GRID_HEIGHT))
     episode = Episode(states, env, px_scale, (WIN_WIDTH, WIN_HEIGHT))
-    episode.animate(30)
+    episode.animate(60)
