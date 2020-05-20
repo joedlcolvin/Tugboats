@@ -7,7 +7,7 @@ def render(win, environment, initial_state, px_scale):
         for i in range(len(domain.e)):
             graphics.Line(  graphics.Point(domain.e[i][0][0]*px_scale, domain.e[i][0][1]*px_scale), 
                             graphics.Point(domain.e[i][1][0]*px_scale, domain.e[i][1][1]*px_scale)).draw(win)
-    ship = environment.ship_ends(state)
+    ship = environment.ship_ends(initial_state)
     print(ship)
     ship_rend = graphics.Line(  graphics.Point(ship[0][0]*px_scale, ship[0][1]*px_scale), 
                                 graphics.Point(ship[1][0]*px_scale, ship[1][1]*px_scale)).draw(win)
