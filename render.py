@@ -25,17 +25,19 @@ class Episode:
 
     def animate(self, delay):
         win = graphics.GraphWin("Tugboat episode", self.win_size[0], self.win_size[1], autoflush=False)
+        message = graphics.Text(graphics.Point(win.getWidth()/2, 20), 'Click anywhere to play.')
+        message.draw(win)
+        while(True):
+            win.getMouse()
+            self._play_episode(win, delay)
+
+    def _play_episode(self, win, delay):
         ship_rend = render(win, self.states[0], self.px_scale, self.environment, True)
         # We render ship twice on first state, but this doesn't matter
         for state in self.states:
             ship_rend.undraw()
             ship_rend = render(win, state, self.px_scale, self.environment)
             graphics.update(delay)
-
-        message = graphics.Text(graphics.Point(win.getWidth()/2, 20), 'Click anywhere to quit.')
-        message.draw(win)
-        win.getMouse()
-        win.close()
 
 def test_static():
     from learn import Polygon, Environment
@@ -56,7 +58,6 @@ def test_static():
 
 def test_episode():
     from learn import Polygon, Environment
-
     
     WIN_WIDTH = 500
     WIN_HEIGHT = 500

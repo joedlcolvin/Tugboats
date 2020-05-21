@@ -1,10 +1,8 @@
-# TODO fix q_table invalid actions hack
-
 import math
 import numpy as np
 import render
 from operator import add
-from queue import PriorityQueue
+from p_queue import PQueue
 
 class Environment:
     def __init__(self, polygons, ship_length, grid_dims):
@@ -36,11 +34,11 @@ class Polygon:
 
 ### Learning parameters ###
 # GONNA NEED SOME TESTING
-GAMMA = 0.95
-THETA = 1.0
+GAMMA = 0.5
+THETA = 9
 ALPHA = 0.1
-ITER_NUM = int(1e3)          #Number of prioritised sweeping iterations
-TERM_REWARD = 1000
+ITER_NUM = int(1e5)          #Number of prioritised sweeping iterations
+TERM_REWARD = 100
 
 ### Environment parameters ### 
 SHIP_LENGTH = 5
@@ -58,36 +56,52 @@ SHIP_LENGTH = 5
 #termination_state = np.array([19,33,270])
 
 #SMALL GRID#
-GRID_WIDTH = 20
-GRID_HEIGHT = 20
-POLYGONS = [Polygon([[0,10],[10,10],[10,11],[0,11]])]
+#GRID_WIDTH = 20
+#GRID_HEIGHT = 20
+#POLYGONS = [Polygon([[0,10],[10,10],[10,11],[0,11]])]
+#ENV = Environment(POLYGONS, SHIP_LENGTH, (GRID_WIDTH, GRID_HEIGHT))
+#initial_state = np.array([5,5,0]) # states defined as tuples, 
+#                        # [x position, y position, degrees anticlockwise from x-axis]
+#termination_state = np.array([5,15,180])
+#
+#
+#ORIENT_VAL_NUM = 360    #One for each degree
+#ACTION_NUM = 6          #Number of different actions = #{forward, back, left, right, acw, cw}
+#
+#TRANSLATION_DIST = 2
+
+#SMALLEST GRID#
+SHIP_LENGTH = 1 #OVERRIDE SHIP LENGTH
+
+GRID_WIDTH = 5
+GRID_HEIGHT = 5
+POLYGONS = []
 ENV = Environment(POLYGONS, SHIP_LENGTH, (GRID_WIDTH, GRID_HEIGHT))
-initial_state = np.array([5,5,0]) # states defined as tuples, 
+initial_state = np.array([1,1,0]) # states defined as tuples, 
                         # [x position, y position, degrees anticlockwise from x-axis]
-termination_state = np.array([5,15,180])
+termination_state = np.array([3,3,9])
 
 
-ORIENT_VAL_NUM = 360    #One for each degree
+ORIENT_VAL_NUM = 36    #One for each 10 degrees
 ACTION_NUM = 6          #Number of different actions = #{forward, back, left, right, acw, cw}
 
-TRANSLATION_DIST = 2
-
+TRANSLATION_DIST = 2**0.5
 
 ### Render params ###
 WIN_WIDTH = 500
 WIN_HEIGHT= 500
-FRAME_TIME_MS = 30
+FRAME_TIME_MS = 1
 
 ### INITIALISING TABLE ###
 q_table = np.zeros(shape=(GRID_WIDTH, GRID_HEIGHT, ORIENT_VAL_NUM, ACTION_NUM), dtype=float)
 #Priority queue - implemented using collections library deque
-p_queue = PriorityQueue()
+p_queue = PQueue()
 
 def main():
-    print("initialising_q_table")
-    new_env=True
-    q_table = init_q_table(new_env)
-    print("q_table initialised")
+    #print("initialising_q_table")
+    #new_env=True
+    #q_table = init_q_table(new_env)
+    #print("q_table initialised")
     print("learning q")
     learn_q()
     states, actions, rewards = run_pi()
@@ -123,7 +137,9 @@ def init_q_table(new_env):
 
 #Note: Ensure that actions returned are legal
 def greedy_pol(S):
-    return np.argmax(q_table[S[0],S[1],S[2]])
+    #return np.argmax(q_table[S[0],S[1],S[2]])
+    print("Current q table for S:", q_table[S[0],S[1],S[2]])
+    return max_valid_a_over_q(q_table[S[0],S[1],S[2]], S)
 
 #TODO implement
 def epsilon_greedy_pol(S):
@@ -131,24 +147,28 @@ def epsilon_greedy_pol(S):
     return -1
 
 def env_response(S,A):
-    reward_func_list = [-10,-10,-100,-100,-1,-1]
+    reward_func_list = [-10,-10,-40,-40,-20,-20]
     def reward_func(Sprime, A):
         if np.all(np.equal(Sprime, termination_state)):
-            return TERM_REWARD 
+            return TERM_REWARD
         else:
             return reward_func_list[A]
 
-    action_func = [ lambda orient: TRANSLATION_DIST*np.array([math.cos(math.radians(orient)), math.sin(math.radians(orient)),0]),   # move forward by TRANSLATION_DIST 
-                    lambda orient: -TRANSLATION_DIST*np.array([math.cos(math.radians(orient)), math.sin(math.radians(orient)),0]),  # move back by TRANSLATION_DIST
-                    lambda orient: TRANSLATION_DIST*np.array([math.cos(math.radians(orient)+math.pi/2), math.sin(math.radians(orient)+math.pi/2),0]),    # move left by TRANSLATION_DIST
-                    lambda orient: -TRANSLATION_DIST*np.array([math.cos(math.radians(orient)+math.pi/2), math.sin(math.radians(orient)+math.pi/2),0]),    # move right by TRANSLATION_DIST
+    action_func = [ lambda orient: TRANSLATION_DIST*np.array([math.cos(math.radians(orient*10)), math.sin(math.radians(orient*10)),0]),   # move forward by TRANSLATION_DIST 
+                    lambda orient: -TRANSLATION_DIST*np.array([math.cos(math.radians(orient*10)), math.sin(math.radians(orient*10)),0]),  # move back by TRANSLATION_DIST
+                    lambda orient: TRANSLATION_DIST*np.array([math.cos(math.radians(orient*10)+math.pi/2), math.sin(math.radians(orient*10)+math.pi/2),0]),    # move left by TRANSLATION_DIST
+                    lambda orient: -TRANSLATION_DIST*np.array([math.cos(math.radians(orient*10)+math.pi/2), math.sin(math.radians(orient*10)+math.pi/2),0]),    # move right by TRANSLATION_DIST
                     lambda orient: np.array([0,0,1]),    # rotate 1 degree anti clockwise
                     lambda orient: np.array([0,0,-1])    # rotate 1 degree clockwise
                     ]
     Sprime = list(map(add, S, action_func[A](S[2])))
-    Sprime[2] = Sprime[2]%360
+    Sprime[2] = int(Sprime[2]%36)
     Sprime = snap_to_grid(Sprime)
     R = reward_func(Sprime, A)
+    if np.all(np.equal(Sprime, termination_state)):
+        Sprime = initial_state
+    #print("State, actions: ", S,A)
+    #print("Results in reward, new_state: ", R, Sprime)
     return R, Sprime
 
 # return list of (Sprime,A) which result in S 
@@ -160,10 +180,11 @@ def backup(S):
 
     state_actions = []
     for a in range(6):
-        state = env_response(S,a)
+        state = env_response(S,a)[1]
         # REMEMBER only legal, non-terminal states should go in this list
-        if(is_valid(state, ENV) or state == terminal_state):
+        if is_valid(state, ENV) or np.all(np.equal(state, termination_state)):
             state_actions.append((state, reverse_action[a]))
+    #print("backups: ", state_actions)
     return state_actions
 
 def snap_to_grid(S):
@@ -173,41 +194,66 @@ def learn_q():
     # LEARNING Q
     S = initial_state
     for i in range(ITER_NUM):
-        print("Sweep: ", i)
+        print("State: ", S)
         A = greedy_pol(S)   #TODO try epsilon greedy policy here
+        #print("A: ",A)
         R, Sprime = env_response(S,A)
-        P = abs(R+GAMMA*max(q_table[Sprime[0],Sprime[1],Sprime[2]])-q_table[S[0],S[1],S[2],A])
+        print(R, Sprime)
+        P = abs(R+GAMMA*max_valid_q(q_table[Sprime[0],Sprime[1],Sprime[2]],S)-q_table[S[0],S[1],S[2],A])
+        print(P)
         if P > THETA:
-            #Since priority queue only uses integer priority, we use P multiplied to 100 and rounded
-            p_queue.put(int(round(P*100)), (S,A))
+            #Since priority queue only uses integer priority, we use P multiplied to -100 and rounded
+            p_queue.add_task((tuple(S),A), int(round(-P*100)))
             while(not p_queue.empty()):
-                S, A = p_queue.pop()
+                print("p_queue size: ",p_queue.qsize())
+                S, A = p_queue.pop_task()
+                #print("S,A:", S, A)
                 R, Sprime = env_response(S,A)
-                q_table[S[0],S[1],S[2],A] = q_table[S[0],S[1],S[2],A] + ALPHA*(R+GAMMA*max(q_table[Sprime[0],Sprime[1],Sprime[2]])-q_table[S[0],S[1],S[2],A])
+                #print("R,Sprime:", R, Sprime)
+                q_table[S[0],S[1],S[2],A] = q_table[S[0],S[1],S[2],A] + ALPHA*(R+GAMMA*max_valid_q(q_table[Sprime[0],Sprime[1],Sprime[2]],S)-q_table[S[0],S[1],S[2],A])
+                #print("q:",q_table[S[0],S[1],S[2],A])
                 for Sbar,Abar in backup(S):
-                    Rbar = env_response(Sbar,Abar)
-                    P = abs(Rbar+GAMMA*max(q_table[S[0],S[1],S[2]])-q_table[Sbar[0],Sbar[1],Sbar[2],Abar])
+                    #print("Sbar, Abar:",Sbar, Abar)
+                    Rbar = env_response(Sbar,Abar)[0]
+                    #print("Rbar:", Rbar)
+                    P = abs(Rbar+GAMMA*max_valid_q(q_table[S[0],S[1],S[2]],S)-q_table[Sbar[0],Sbar[1],Sbar[2],Abar])
                     if P > THETA:
-                        p_queue.put(int(round(P*100)), (S,A))
+                        #print("P:",P)
+                        #print("Sbar:",Sbar)
+                        p_queue.add_task((tuple(Sbar),Abar), int(round(-P*100)))
+        S=Sprime
 
 # TODO DECIDE WHETHER TO USE THIS, OR INITIALISE Q_TABLE
 def max_valid_q(arr, S):
     maxq=-np.inf
-    for a, q_val in arr:
-        if is_valid(env_response([i,j,r],a)[1], ENV):
-            maxq = q_val
+    for a, q_val in enumerate(arr):
+        if is_valid(env_response(S,a)[1], ENV):
+            maxq = max(q_val, maxq)
+    assert(maxq!=-np.inf)
     return maxq
+
+def max_valid_a_over_q(arr, S):
+    maxa=-1
+    maxq=-np.inf
+    for a, q_val in enumerate(arr):
+        if is_valid(env_response(S,a)[1], ENV):
+            if(maxq<q_val):
+                maxq=q_val
+                maxa=a
+    assert(maxa!=-1)
+    return maxa
 
 def run_pi():
     states = []
     actions = []
     rewards = []
     S = initial_state
-    while S!=termination_state:
-        state.append(S)
+    while not np.all(np.equal(S, termination_state)):
+        states.append(S)
         A = greedy_pol(S)
         actions.append(A)
         R, S = env_response(S,A)
+        print(R,S)
         rewards.append(R)
     return states, actions, rewards
 
@@ -223,15 +269,17 @@ def is_valid(state, environment):
     def _intersect_points(A,B,C,D):
         return _ccw(A,C,D) != _ccw(B,C,D) and _ccw(A,B,C) != _ccw(A,B,D)
 
+    _ship_ends = environment.ship_ends(state)
+    for p in _ship_ends:
+        if p[0] < 0 or p[0] >= GRID_WIDTH or p[1] < 0 or p[1] >= GRID_HEIGHT:
+            return False
+
     valid = True
     for poly in environment.polygons:
         for edge in poly.e:
-            _ship_ends = environment.ship_ends(state)
             for p in _ship_ends:
                 if _intersect([p, poly.outside], edge):
                     valid = 1-valid
-                if p[0] < 0 or p[0] > GRID_WIDTH or p[1] < 0 or p[1] > GRID_HEIGHT:
-                    return False
             if _intersect(_ship_ends, edge):
                 return False
     return valid
