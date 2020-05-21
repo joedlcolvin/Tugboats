@@ -13,10 +13,10 @@ class Environment:
         self.ship_length = ship_length
 
     def ship_ends(self, state):
-        return [[state[0]+math.cos(math.radians(state[2]))*0.5*self.ship_length, 
-                 state[1]-math.sin(math.radians(state[2]))*0.5*self.ship_length],
-                [state[0]-math.cos(math.radians(state[2]))*0.5*self.ship_length, 
-                 state[1]+math.sin(math.radians(state[2]))*0.5*self.ship_length]]
+        return [[state[0]+math.cos(math.radians(state[2]*10))*0.5*self.ship_length, 
+                 state[1]-math.sin(math.radians(state[2]*10))*0.5*self.ship_length],
+                [state[0]-math.cos(math.radians(state[2]*10))*0.5*self.ship_length, 
+                 state[1]+math.sin(math.radians(state[2]*10))*0.5*self.ship_length]]
 
     def _poly_in_grid(self, poly, grid_dims):
         b = True
@@ -34,10 +34,10 @@ class Polygon:
 
 ### Learning parameters ###
 # GONNA NEED SOME TESTING
-GAMMA = 0.5
-THETA = 9
+GAMMA = 0.9
+THETA = 0.5
 ALPHA = 0.1
-ITER_NUM = int(1e4)          #Number of prioritised sweeping iterations
+ITER_NUM = int(1e3)          #Number of prioritised sweeping iterations
 TERM_REWARD = 100
 
 ### Environment parameters ### 
@@ -90,10 +90,10 @@ TRANSLATION_DIST = 2**0.5
 ### Render params ###
 WIN_WIDTH = 500
 WIN_HEIGHT= 500
-FRAME_TIME_MS = 1
+FRAME_TIME_MS = 5
 
 ### INITIALISING TABLE ###
-q_table = np.zeros(shape=(GRID_WIDTH, GRID_HEIGHT, ORIENT_VAL_NUM, ACTION_NUM), dtype=float)
+q_table = np.full((GRID_WIDTH, GRID_HEIGHT, ORIENT_VAL_NUM, ACTION_NUM), 10, dtype=float)
 #Priority queue - implemented using collections library deque
 p_queue = PQueue()
 
@@ -103,8 +103,9 @@ def main():
     #q_table = init_q_table(new_env)
     #print("q_table initialised")
     print("learning q")
-    learn_q()
-    states, actions, rewards = run_pi()
+    epsilon = 0.1
+    learn_q_sarsa(epsilon)
+    states, actions, rewards = run_pi(epsilon)
     px_scale = min(int(WIN_WIDTH/GRID_WIDTH), int(WIN_HEIGHT/GRID_HEIGHT))
     episode = render.Episode(states, ENV, px_scale, [WIN_WIDTH,WIN_HEIGHT])
     episode.animate(FRAME_TIME_MS)
@@ -141,13 +142,18 @@ def greedy_pol(S):
     #print("Current q table for S:", q_table[S[0],S[1],S[2]])
     return max_valid_a_over_q(q_table[S[0],S[1],S[2]], S)
 
-#TODO implement
-def epsilon_greedy_pol(S):
-    #REMEMBER when choosing action, must check that it is legal
-    return -1
+def epsilon_greedy_pol(S, epsilon):
+    r = np.random.uniform(0.,1.)
+    if(r < epsilon):
+        while(True):
+            a = int(np.floor(np.random.uniform(0.,1.)*ACTION_NUM))
+            if is_valid(env_response(S,a)[1], ENV):
+                return a
+    else:
+        return greedy_pol(S)
 
 def env_response(S,A):
-    reward_func_list = [-10,-10,-40,-40,-20,-20]
+    reward_func_list = [-10,-10,-40,-40,-5,-5]
     def reward_func(Sprime, A):
         if np.all(np.equal(Sprime, termination_state)):
             return TERM_REWARD
@@ -211,17 +217,42 @@ def learn_q():
                 R, Sprime = env_response(S,A)
                 #print("R,Sprime:", R, Sprime)
                 q_table[S[0],S[1],S[2],A] = q_table[S[0],S[1],S[2],A] + ALPHA*(R+GAMMA*max_valid_q(q_table[Sprime[0],Sprime[1],Sprime[2]],S)-q_table[S[0],S[1],S[2],A])
-                #print("q:",q_table[S[0],S[1],S[2],A])
+                print("q:",q_table[S[0],S[1],S[2],A], "\nS: ", S, "\nA", A)
                 for Sbar,Abar in backup(S):
                     #print("Sbar, Abar:",Sbar, Abar)
                     Rbar = env_response(Sbar,Abar)[0]
                     #print("Rbar:", Rbar)
                     P = abs(Rbar+GAMMA*max_valid_q(q_table[S[0],S[1],S[2]],S)-q_table[Sbar[0],Sbar[1],Sbar[2],Abar])
                     if P > THETA:
-                        #print("P:",P)
+                        print("P:",P)
                         #print("Sbar:",Sbar)
                         p_queue.add_task((tuple(Sbar),Abar), int(round(-P*100)))
         S=Sprime
+
+def learn_q_sarsa(epsilon):
+    Rtots=[]
+    # LEARNING Q
+    for i in range(ITER_NUM):
+        S = initial_state
+        Rtot = 0
+        A = epsilon_greedy_pol(S, epsilon)
+        print("Iteration: ", i)
+        while(True):
+            print("State: ", S)
+            print("Action: ", A)
+            R, Sprime = env_response(S,A)
+            Rtot+=R
+            Aprime = epsilon_greedy_pol(Sprime, epsilon)
+            q_table[S[0],S[1],S[2],A] = q_table[S[0],S[1],S[2],A] + ALPHA*(R+GAMMA*q_table[Sprime[0],Sprime[1],Sprime[2],Aprime]-q_table[S[0],S[1],S[2],A])
+            if R == TERM_REWARD:
+                print(Rtot)
+                Rtots.append(Rtot)
+                break
+            S=Sprime
+            A=Aprime
+    import matplotlib.pyplot as plt
+    plt.plot(Rtots)
+    plt.show()
 
 # TODO DECIDE WHETHER TO USE THIS, OR INITIALISE Q_TABLE
 def max_valid_q(arr, S):
@@ -243,19 +274,21 @@ def max_valid_a_over_q(arr, S):
     assert(maxa!=-1)
     return maxa
 
-def run_pi():
+def run_pi(epsilon=0):
     print("Running pi")
     states = []
     actions = []
     rewards = []
     S = initial_state
-    while not np.all(np.equal(S, termination_state)):
+    while True:
         states.append(S)
-        A = greedy_pol(S)
+        A = epsilon_greedy_pol(S, epsilon)
         actions.append(A)
         R, S = env_response(S,A)
         print(S)
         rewards.append(R)
+        if R == TERM_REWARD:
+            break
     return states, actions, rewards
 
 
@@ -284,3 +317,6 @@ def is_valid(state, environment):
             if _intersect(_ship_ends, edge):
                 return False
     return valid
+
+if __name__ == "__main__":
+    main()

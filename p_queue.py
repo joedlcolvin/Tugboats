@@ -50,10 +50,10 @@ class PQueue:
 def test():
     q = PQueue()
     q.add_task((tuple(np.array([1,2,3])),1),1)
-    q.add_task((tuple(np.array([1,2,3])),1),2)
-    q.add_task((tuple(np.array([4,5,6])),1),-1)
-    q.add_task((tuple(np.array([1,2,3])),1),-10)
+    q.add_task((tuple(np.array([4,5,6])),1),0)
+    q.add_task((tuple(np.array([1,2,3])),1),-1)
+    print(q.pop_task())
+    print(q.pop_task())
+    q.add_task((tuple(np.array([1,2,3])),1),0.5)
 
-    while(not q.empty()):
-        print(q.qsize())
-        print("POP:",q.pop_task())
+    print(q.pop_task())
