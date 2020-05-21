@@ -2,33 +2,6 @@ import heapq
 import numpy as np
 import itertools
  
-class Pqueue:
-    def __init__(self):
-        self.q=[]
-
-    def pop(self):
-        return heapq.heappop(self.q)
-
-    def push(self, p, el):
-        for e in self.q:
-            if(self._equal(e[1], el)):
-                if(p < e[0]):
-                    self.q.remove(e)
-                    heapq.heapify(self.q)
-                    heapq.heappush(self.q, (p,el))
-                    return
-        heapq.heappush(self.q, (p,el))
-
-    def empty(self):
-        return len(self.q) == 0
-
-    def len(self):
-        return len(self.q)
-
-    def _equal(self, SA1, SA2):
-        return np.any(np.equal(SA1[0],SA2[0])) and SA1[1] == SA2[1]
-
-
 class PQueue:
     def __init__(self):
         self.pq = []                         # list of entries arranged in a heap
@@ -49,8 +22,9 @@ class PQueue:
 
     def remove_task_if_lower_priority(self, task, priority):
         'Mark an existing task as self.REMOVED.  Raise KeyError if not found.'
-        entry = self.entry_finder.pop(task)
+        entry = self.entry_finder[task]
         if entry[0] > priority:
+            del self.entry_finder[task]
             entry[-1] = self.REMOVED
             return True
         else:
@@ -61,8 +35,8 @@ class PQueue:
         while self.pq:
             priority, count, task = heapq.heappop(self.pq)
             if task is not self.REMOVED:
-                print(task)
-                print(self.entry_finder)
+                #print(task)
+                #print(self.entry_finder)
                 del self.entry_finder[task]
                 return task
         raise KeyError('pop from an empty priority queue')

@@ -37,7 +37,7 @@ class Polygon:
 GAMMA = 0.5
 THETA = 9
 ALPHA = 0.1
-ITER_NUM = int(1e5)          #Number of prioritised sweeping iterations
+ITER_NUM = int(1e4)          #Number of prioritised sweeping iterations
 TERM_REWARD = 100
 
 ### Environment parameters ### 
@@ -138,7 +138,7 @@ def init_q_table(new_env):
 #Note: Ensure that actions returned are legal
 def greedy_pol(S):
     #return np.argmax(q_table[S[0],S[1],S[2]])
-    print("Current q table for S:", q_table[S[0],S[1],S[2]])
+    #print("Current q table for S:", q_table[S[0],S[1],S[2]])
     return max_valid_a_over_q(q_table[S[0],S[1],S[2]], S)
 
 #TODO implement
@@ -198,9 +198,9 @@ def learn_q():
         A = greedy_pol(S)   #TODO try epsilon greedy policy here
         #print("A: ",A)
         R, Sprime = env_response(S,A)
-        print(R, Sprime)
+        #print(R, Sprime)
         P = abs(R+GAMMA*max_valid_q(q_table[Sprime[0],Sprime[1],Sprime[2]],S)-q_table[S[0],S[1],S[2],A])
-        print(P)
+        #print(P)
         if P > THETA:
             #Since priority queue only uses integer priority, we use P multiplied to -100 and rounded
             p_queue.add_task((tuple(S),A), int(round(-P*100)))
@@ -244,6 +244,7 @@ def max_valid_a_over_q(arr, S):
     return maxa
 
 def run_pi():
+    print("Running pi")
     states = []
     actions = []
     rewards = []
@@ -253,7 +254,7 @@ def run_pi():
         A = greedy_pol(S)
         actions.append(A)
         R, S = env_response(S,A)
-        print(R,S)
+        print(S)
         rewards.append(R)
     return states, actions, rewards
 
