@@ -22,7 +22,9 @@ class Episode:
     def __init__(self, states, rewards, environment, px_scale, win_width, win_height):
         self.environment = environment
         self.states = states
-        self.rewards = rewards
+        self.rewards = [rewards[0]]
+        for i in range(len(rewards)-1):
+            self.rewards.append(rewards[i+1]+self.rewards[i])
         self.px_scale = px_scale
         self.win_width = win_width
         self.win_height = win_height
@@ -78,7 +80,7 @@ def test_episode():
     ship_length = 10
     env = Environment(POLYGONS, SHIP_LENGTH, [GRID_WIDTH, GRID_HEIGHT], 50, 1, [1,1,1,1,1,1], 10, [0,0,0], [0,0,0], 6)
     states = [[10,10,i] for i in range(360)]
-    rewards = [-i for i in range(360)]
+    rewards = [-1 for i in range(360)]
     px_scale = min(int(WIN_WIDTH/GRID_WIDTH), int(WIN_HEIGHT/GRID_HEIGHT))
     episode = Episode(states, rewards, env, px_scale, WIN_WIDTH, WIN_HEIGHT)
     episode.animate(60)

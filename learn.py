@@ -71,7 +71,7 @@ class Environment:
             return _intersect_points(l1[0],l1[1], l2[0],l2[1])
 
         def _ccw(A,B,C):
-            return (C[1]-A[1]) * (B[0]-A[0]) >= (B[1]-A[1]) * (C[0]-A[0])
+            return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
 
         # Return true if line segments AB and CD intersect
         def _intersect_points(A,B,C,D):
@@ -82,15 +82,15 @@ class Environment:
             if p[0] < 0 or p[0] >= self.grid_dims[0] or p[1] < 0 or p[1] >= self.grid_dims[1]:
                 return False
 
-        valid = True
+        valid = [True, True]
         for poly in self.polygons:
             for edge in poly.e:
-                for p in _ship_ends:
+                for i, p in enumerate(_ship_ends):
                     if _intersect([p, poly.outside], edge):
-                        valid = 1-valid
+                        valid[i] = 1-valid[i]
                 if _intersect(_ship_ends, edge):
                     return False
-        return valid
+        return valid[0] and valid[1]
 
     class Polygon:
         def __init__(self, v):
@@ -343,7 +343,7 @@ def main():
     # Rendering parameters
     r_params = {"win_width" : 500, "win_height" : 500, "frame_time_ms" : 50}
     # Learning parameters
-    l_params = {"gamma": 1, "alpha": 0.05, "iter_num": 1}
+    l_params = {"gamma": 1, "alpha": 0.05, "iter_num": 100}
     # Policy parameters
     p_params = {"epsilon": 0.1}
 
@@ -395,7 +395,7 @@ def main():
     px_scale = min( int(r_params['win_width']/env.grid_dims[0]), 
                     int(r_params['win_height']/env.grid_dims[1]))
     print("rendering")
-    episode = render.Episode(states, env, px_scale, r_params['win_width'], r_params['win_height'])
+    episode = render.Episode(states, rewards, env, px_scale, r_params['win_width'], r_params['win_height'])
     episode.animate(r_params['frame_time_ms'])
 
 if __name__ == "__main__":
