@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import render
+import pickle
 from operator import add
 from p_queue import PQueue
 
@@ -343,7 +344,7 @@ def main():
     # Rendering parameters
     r_params = {"win_width" : 500, "win_height" : 500, "frame_time_ms" : 50}
     # Learning parameters
-    l_params = {"gamma": 1, "alpha": 0.05, "iter_num": 100}
+    l_params = {"gamma": 1, "alpha": 0.05, "iter_num": 10}
     # Policy parameters
     p_params = {"epsilon": 0.1}
 
@@ -394,8 +395,25 @@ def main():
     states, actions, rewards = run_pi(env, q_table, p_params)
     px_scale = min( int(r_params['win_width']/env.grid_dims[0]), 
                     int(r_params['win_height']/env.grid_dims[1]))
-    print("rendering")
+    print("defining episode")
     episode = render.Episode(states, rewards, env, px_scale, r_params['win_width'], r_params['win_height'])
+
+    print("saving episode")
+    data = {}
+    data['r_params'] = r_params
+    data['l_params'] = l_params
+    data['p_params'] = p_params
+    data['environment'] = env
+    data['q_table'] = q_table
+    data['episode'] = episode
+
+    from datetime import datetime
+    dt_string = datetime.now().strftime("%d%m%Y%H%M%S")
+    f = open("data/" + dt_string + ".pkl", "wb+")
+    pickle.dump(data, f)
+    f.close()
+
+    print("animating episode")
     episode.animate(r_params['frame_time_ms'])
 
 if __name__ == "__main__":
